@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3R/4R 相片拼貼大師</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f39c12;
+            --bg-color: #f5f7fa;
+            --panel-bg: #ffffff;
+            --text-color: #333333;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Microsoft JhengHei, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+            width: 100%;
+            max-width: 1300px;
+        }
+
+        /* 左側控制面板 */
+        .controls {
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            width: 320px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            height: fit-content;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 按鈕樣式 */
+        .btn {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            font-size: 1rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-upload {
+            background-color: var(--primary-color);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-upload input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .btn-download {
+            background-color: #27ae60;
+            color: white;
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid #ddd;
+            color: #666;
+            padding: 8px;
+            font-size: 0.9rem;
+        }
+
+        .btn-outline.active {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background-color: #eaf4ff;
+        }
+
+        .btn:hover {
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+        }
+
+        /* 選擇器樣式 */
+        .radio-group {
+            display: flex;
+            gap: 5px;
+            background: #f0f2f5;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .radio-option {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            color: #666;
+        }
+
+        .radio-option.active {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary-color);
+        }
+
+        /* 排版模式選擇 */
+        .layout-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        /* 畫布預覽區域 */
+        .preview-area {
+            flex-grow: 1;
+            background: #e0e0e0;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+            min-height: 500px;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
+        }
+
+        canvas {
+            background-color: white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 100%;
+            height: auto;
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .info-text {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        #loading {
+            display: none;
+            color: var(--primary-color);
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+        }
+
+        /* 標籤 */
+        .badge {
+            background: #e74c3c;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>📸 拼貼大師 <span style="font-size: 1rem; color: #666; font-weight: normal;">| 支援 3R & 4R 列印</span></h1>
+
+    <div class="container">
+        <!-- 左側控制區 -->
+        <div class="controls">
+            
+            <div class="control-group">
+                <button class="btn btn-upload">
+                    📂 上傳照片 (2-9張)
+                    <input type="file" id="fileInput" multiple accept="image/*">
+                </button>
+                <div id="fileCount" class="info-text">尚未選擇照片</div>
+            </div>
+
+            <div class="section-title">1. 相紙設定</div>
+            
+            <div class="control-group">
+                <label>尺寸 (Size)</label>
+                <div class="radio-group" id="sizeGroup">
+                    <div class="radio-option" onclick="setPaperSize('3R')">3R (3.5x5")</div>
+                    <div class="radio-option active" onclick="setPaperSize('4R')">4R (4x6")</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>方向 (Orientation)</label>
+                <div class="radio-group" id="orientGroup">
+                    <div class="radio-option active" onclick="setOrientation('landscape')">橫向 (Landscape)</div>
+                    <div class="radio-option" onclick="setOrientation('portrait')">直向 (Portrait)</div>
+                </div>
+            </div>
+
+            <div class="section-title">2. 排版樣式</div>
+
+            <div class="control-group">
+                <div class="layout-options" id="layoutButtons">
+                    <!-- 動態生成按鈕 -->
+                    <button class="btn btn-outline active" disabled>請先上傳照片</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <button class="btn" style="background-color: var(--secondary-color); color: white; padding: 8px;" onclick="shuffleImages()">
+                    🔀 隨機更換位置
+                </button>
+            </div>
+
+            <div class="section-title">3. 細節調整</div>
+
+            <div class="control-group">
+                <label>邊框間距 <span id="gapValue" style="color:var(--primary-color)">20</span> px</label>
+                <input type="range" id="gapInput" min="0" max="100" value="20">
+            </div>
+
+            <div class="control-group">
+                <label>背景顏色</label>
+                <input type="color" id="bgColorInput" value="#ffffff" style="width: 100%; height: 35px; border: 1px solid #ddd; border-radius: 6px;">
+            </div>
+
+            <div id="loading">處理中...</div>
+            <button class="btn btn-download" onclick="downloadImage()">💾 下載列印檔 (HD)</button>
+            <div id="resInfo" class="info-text">規格: 4R - 1800 x 1200 px</div>
+        </div>
+
+        <!-- 右側預覽區 -->
+        <div class="preview-area">
+            <canvas id="collageCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // 設定與變數
+        const DPI = 300;
+        const SIZES = {
+            '3R': { w: 5, h: 3.5 }, // 吋
+            '4R': { w: 6, h: 4 }
+        };
+
+        let state = {
+            paper: '4R',        // 3R or 4R
+            orientation: 'landscape', // landscape or portrait
+            layout: 'grid',     // grid, focus, strip-h, strip-v
+            gap: 20,
+            bgColor: '#ffffff',
+            images: []          // Loaded Image objects
+        };
+
+        // DOM 元素
+        const canvas = document.getElementById('collageCanvas');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('fileInput');
+        const gapInput = document.getElementById('gapInput');
+        const bgColorInput = document.getElementById('bgColorInput');
+        const fileCountDisplay = document.getElementById('fileCount');
+        const layoutContainer = document.getElementById('layoutButtons');
+        const resInfo = document.getElementById('resInfo');
+        const loading = document.getElementById('loading');
+
+        // 初始化
+        init();
+
+        function init() {
+            setPaperSize('4R', false); // 預設 4R
+            // 事件監聽
+            fileInput.addEventListener('change', handleFileSelect);
+            gapInput.addEventListener('input', (e) => {
+                state.gap = parseInt(e.target.value);
+                document.getElementById('gapValue').textContent = state.gap;
+                render();
+            });
+            bgColorInput.addEventListener('input', (e) => {
+                state.bgColor = e.target.value;
+                render();
+            });
+        }
+
+        // --- 設定功能 ---
+
+        function setPaperSize(size, doRender = true) {
+            state.paper = size;
+            updateRadioUI('sizeGroup', size === '3R' ? 0 : 1);
+            if(doRender) render();
+        }
+
+        function setOrientation(orient) {
+            state.orientation = orient;
+            updateRadioUI('orientGroup', orient === 'landscape' ? 0 : 1);
+            render();
+        }
+
+        function setLayout(layoutType) {
+            state.layout = layoutType;
+            // 更新 UI 狀態
+            const buttons = layoutContainer.querySelectorAll('.btn-outline');
+            buttons.forEach(btn => {
+                if (btn.dataset.type === layoutType) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            render();
+        }
+
+        function updateRadioUI(groupId, activeIndex) {
+            const group = document.getElementById(groupId);
+            const options = group.querySelectorAll('.radio-option');
+            options.forEach((opt, idx) => {
+                if (idx === activeIndex) opt.classList.add('active');
+                else opt.classList.remove('active');
+            });
+        }
+
+        // --- 檔案處理 ---
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            if (files.length < 2 || files.length > 9) {
+                alert("建議選擇 2 到 9 張照片以獲得最佳效果。");
+            }
+
+            fileCountDisplay.textContent = `已選擇 ${files.length} 張照片`;
+            loading.style.display = 'block';
+
+            const promises = files.map(file => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => resolve(img);
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            Promise.all(promises).then(images => {
+                state.images = images;
+                state.layout = 'grid'; // 重置為預設網格
+                updateLayoutOptions(images.length);
+                loading.style.display = 'none';
+                render();
+            });
+        }
+
+        function shuffleImages() {
+            if (state.images.length === 0) return;
+            // Fisher-Yates shuffle
+            for (let i = state.images.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [state.images[i], state.images[j]] = [state.images[j], state.images[i]];
+            }
+            render();
+        }
+
+        function updateLayoutOptions(count) {
+            layoutContainer.innerHTML = '';
+            
+            const options = [
+                { id: 'grid', label: '🔲 自動網格' },
+                { id: 'strip-h', label: '📏 水平排列' },
+                { id: 'strip-v', label: '📐 垂直排列' }
+            ];
+
+            // 只有 3 張以上才顯示「主圖模式」，因為 2 張主圖模式等於 1:1 分割
+            if (count >= 3) {
+                options.splice(1, 0, { id: 'focus', label: '⭐ 主圖模式' });
+            }
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = `btn btn-outline ${opt.id === state.layout ? 'active' : ''}`;
+                btn.textContent = opt.label;
+                btn.dataset.type = opt.id;
+                btn.onclick = () => setLayout(opt.id);
+                layoutContainer.appendChild(btn);
+            });
+        }
+
+        // --- 渲染核心 ---
+
+        function render() {
+            // 1. 計算 Canvas 尺寸
+            const sizeInch = SIZES[state.paper];
+            const isLandscape = state.orientation === 'landscape';
+            
+            // 基礎寬高
+            const baseW = isLandscape ? Math.max(sizeInch.w, sizeInch.h) : Math.min(sizeInch.w, sizeInch.h);
+            const baseH = isLandscape ? Math.min(sizeInch.w, sizeInch.h) : Math.max(sizeInch.w, sizeInch.h);
+
+            canvas.width = baseW * DPI;
+            canvas.height = baseH * DPI;
+
+            resInfo.textContent = `規格: ${state.paper} (${isLandscape?'橫':'直'}) - ${canvas.width} x ${canvas.height} px`;
+
+            const W = canvas.width;
+            const H = canvas.height;
+            const gap = state.gap * 2; // 高解析度下加倍間距
+
+            // 2. 繪製背景
+            ctx.fillStyle = state.bgColor;
+            ctx.fillRect(0, 0, W, H);
+
+            if (state.images.length === 0) {
+                drawEmptyState();
+                return;
+            }
+
+            // 3. 計算版面配置 (Rectangles)
+            const rects = calculateLayout(state.layout, state.images.length, W, H, gap);
+
+            // 4. 繪圖
+            rects.forEach((rect, i) => {
+                if (state.images[i]) {
+                    drawObjectFit(state.images[i], rect.x, rect.y, rect.w, rect.h);
+                }
+            });
+        }
+
+        function calculateLayout(type, count, W, H, gap) {
+            let rects = [];
+            
+            if (type === 'strip-h') {
+                // 水平條狀
+                const h = (H - (count + 1) * gap) / count;
+                for(let i=0; i<count; i++) {
+                    rects.push({ x: gap, y: gap + i*(h+gap), w: W - 2*gap, h: h });
+                }
+            } 
+            else if (type === 'strip-v') {
+                // 垂直條狀
+                const w = (W - (count + 1) * gap) / count;
+                for(let i=0; i<count; i++) {
+                    rects.push({ x: gap + i*(w+gap), y: gap, w: w, h: H - 2*gap });
+                }
+            }
+            else if (type === 'focus' && count >= 3) {
+                // 主圖模式：判斷畫布是橫是直
+                const isWide = W > H;
+                
+                if (isWide) {
+                    // 橫向畫布：左邊一大張，右邊剩餘網格
+                    const mainW = (W - 3*gap) / 2; // 約一半
+                    const mainH = H - 2*gap;
+                    
+                    // 主圖 (Img 0)
+                    rects.push({ x: gap, y: gap, w: mainW, h: mainH });
+
+                    // 右側小圖區域
+                    const rightX = gap + mainW + gap;
+                    const rightW = mainW; // 同寬
+                    const subCount = count - 1;
+                    // 計算右側網格
+                    const cols = Math.ceil(Math.sqrt(subCount));
+                    const rows = Math.ceil(subCount / cols);
+                    const cellW = (rightW - (cols-1)*gap) / cols;
+                    const cellH = (mainH - (rows-1)*gap) / rows;
+
+                    for(let i=0; i<subCount; i++) {
+                        const c = i % cols;
+                        const r = Math.floor(i / cols);
+                        rects.push({
+                            x: rightX + c*(cellW+gap),
+                            y: gap + r*(cellH+gap),
+                            w: cellW,
+                            h: cellH
+                        });
+                    }
+                } else {
+                    // 直向畫布：上面一大張，下面剩餘網格
+                    const mainH = (H - 3*gap) / 2;
+                    const mainW = W - 2*gap;
+
+                    rects.push({ x: gap, y: gap, w: mainW, h: mainH });
+
+                    const botY = gap + mainH + gap;
+                    const botH = mainH;
+                    const subCount = count - 1;
+                    
+                    const cols = Math.ceil(Math.sqrt(subCount)); // 偏好寬的網格
+                    const rows = Math.ceil(subCount / cols);
+                    const cellW = (mainW - (cols-1)*gap) / cols;
+                    const cellH = (botH - (rows-1)*gap) / rows;
+
+                    for(let i=0; i<subCount; i++) {
+                        const c = i % cols;
+                        const r = Math.floor(i / cols);
+                        rects.push({
+                            x: gap + c*(cellW+gap),
+                            y: botY + r*(cellH+gap),
+                            w: cellW,
+                            h: cellH
+                        });
+                    }
+                }
+            }
+            else {
+                // Default Grid (自動網格)
+                // 智慧計算 Cols/Rows
+                let cols, rows;
+                if (count === 2) { cols = W > H ? 2 : 1; rows = W > H ? 1 : 2; }
+                else if (count === 3) { cols = W > H ? 3 : 1; rows = W > H ? 1 : 3; }
+                else if (count === 4) { cols = 2; rows = 2; }
+                else if (count === 5 || count === 6) { cols = W > H ? 3 : 2; rows = W > H ? 2 : 3; }
+                else { cols = Math.ceil(Math.sqrt(count)); rows = Math.ceil(count / cols); }
+
+                const cellW = (W - (cols + 1) * gap) / cols;
+                const cellH = (H - (rows + 1) * gap) / rows;
+
+                for (let i = 0; i < count; i++) {
+                    const c = i % cols;
+                    const r = Math.floor(i / cols);
+                    rects.push({
+                        x: gap + c * (cellW + gap),
+                        y: gap + r * (cellH + gap),
+                        w: cellW,
+                        h: cellH
+                    });
+                }
+            }
+            return rects;
+        }
+
+        function drawObjectFit(img, x, y, w, h) {
+            // 簡單的 Object-fit: Cover 演算法
+            const imgRatio = img.width / img.height;
+            const targetRatio = w / h;
+            let sx, sy, sWidth, sHeight;
+
+            if (imgRatio > targetRatio) {
+                sHeight = img.height;
+                sWidth = sHeight * targetRatio;
+                sy = 0;
+                sx = (img.width - sWidth) / 2;
+            } else {
+                sWidth = img.width;
+                sHeight = sWidth / targetRatio;
+                sx = 0;
+                sy = (img.height - sHeight) / 2;
+            }
+            ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h);
+        }
+
+        function drawEmptyState() {
+            ctx.fillStyle = "#eeeeee";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#bbbbbb";
+            ctx.font = "bold 80px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(state.paper, canvas.width/2, canvas.height/2 - 40);
+            ctx.font = "40px sans-serif";
+            ctx.fillText("預覽區", canvas.width/2, canvas.height/2 + 40);
+        }
+
+        function downloadImage() {
+            if (state.images.length === 0) {
+                alert("請先上傳照片！");
+                return;
+            }
+            const link = document.createElement('a');
+            link.download = `collage_${state.paper}_${new Date().getTime()}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.92);
+            link.click();
+        }
+    </script>
+</body>
+</html>
