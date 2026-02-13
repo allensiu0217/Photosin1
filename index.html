@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3R/4R 相片拼貼大師</title>
+    <title>3R/4R 拼貼大師 - 多形狀 & 自訂背景版</title>
     <style>
         :root {
             --primary-color: #4a90e2;
-            --secondary-color: #f39c12;
+            --accent-color: #ff4757;
             --bg-color: #f5f7fa;
             --panel-bg: #ffffff;
             --text-color: #333333;
@@ -24,6 +24,7 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            user-select: none;
         }
 
         h1 {
@@ -50,13 +51,18 @@
             padding: 25px;
             border-radius: var(--border-radius);
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            width: 320px;
+            width: 380px;
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
             gap: 18px;
             height: fit-content;
+            max-height: 90vh;
+            overflow-y: auto;
         }
+
+        .controls::-webkit-scrollbar { width: 6px; }
+        .controls::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
 
         .section-title {
             font-size: 0.95rem;
@@ -67,6 +73,7 @@
             margin-bottom: 5px;
             border-bottom: 1px solid #eee;
             padding-bottom: 5px;
+            margin-top: 10px;
         }
 
         .control-group {
@@ -84,7 +91,6 @@
             align-items: center;
         }
 
-        /* 按鈕樣式 */
         .btn {
             padding: 12px 15px;
             border: none;
@@ -117,6 +123,18 @@
             cursor: pointer;
         }
 
+        .btn-outline {
+            background-color: transparent;
+            border: 1px dashed #aaa;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .btn-outline:hover {
+            background-color: #f0f0f0;
+            border-color: #888;
+        }
+
         .btn-download {
             background-color: #27ae60;
             color: white;
@@ -124,26 +142,50 @@
             font-size: 1.1rem;
         }
 
-        .btn-outline {
-            background-color: transparent;
-            border: 2px solid #ddd;
+        /* 版型按鈕 - 4列 */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 8px;
+        }
+
+        .layout-btn {
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
             color: #666;
-            padding: 8px;
-            font-size: 0.9rem;
+            padding: 8px 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            gap: 5px;
+            transition: all 0.2s;
+            min-height: 65px;
+            text-align: center;
         }
 
-        .btn-outline.active {
+        .layout-btn:hover {
+            border-color: #b3d7ff;
+            background-color: #e7f5ff;
+        }
+
+        .layout-btn.active {
             border-color: var(--primary-color);
-            color: var(--primary-color);
             background-color: #eaf4ff;
+            color: var(--primary-color);
+            font-weight: bold;
+            box-shadow: 0 0 0 1px var(--primary-color);
+        }
+        
+        .layout-icon {
+            font-size: 1.5rem;
+            line-height: 1.2;
+            display: block;
         }
 
-        .btn:hover {
-            filter: brightness(1.05);
-            transform: translateY(-1px);
-        }
-
-        /* 選擇器樣式 */
         .radio-group {
             display: flex;
             gap: 5px;
@@ -173,16 +215,9 @@
         input[type="range"] {
             width: 100%;
             accent-color: var(--primary-color);
+            cursor: pointer;
         }
 
-        /* 排版模式選擇 */
-        .layout-options {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-        }
-
-        /* 畫布預覽區域 */
         .preview-area {
             flex-grow: 1;
             background: #e0e0e0;
@@ -194,6 +229,7 @@
             overflow: auto;
             min-height: 500px;
             box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
+            position: relative;
         }
 
         canvas {
@@ -202,13 +238,37 @@
             max-width: 100%;
             height: auto;
             transition: width 0.3s, height 0.3s;
+            cursor: grab;
         }
+        
+        canvas:active { cursor: grabbing; }
 
         .info-text {
             font-size: 0.85rem;
             color: #888;
             margin-top: 5px;
             text-align: center;
+        }
+        
+        .tip-text {
+            font-size: 0.85rem;
+            color: var(--accent-color);
+            margin-top: 5px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            background: #ffeaea;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        #editControls {
+            display: none;
+            background: #f1f8ff;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #d0e3ff;
+            margin-bottom: 15px;
         }
 
         #loading {
@@ -218,27 +278,31 @@
             text-align: center;
             padding: 10px;
         }
-
-        /* 標籤 */
-        .badge {
-            background: #e74c3c;
-            color: white;
-            font-size: 0.7rem;
-            padding: 2px 6px;
-            border-radius: 4px;
-            vertical-align: middle;
-            margin-left: 5px;
+        
+        .bg-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #removeBgBtn {
+            font-size: 0.8rem;
+            padding: 8px;
+            background: #eee;
+            color: #666;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: none;
         }
     </style>
 </head>
 <body>
 
-    <h1>📸 拼貼大師 <span style="font-size: 1rem; color: #666; font-weight: normal;">| 支援 3R & 4R 列印</span></h1>
+    <h1>📸 拼貼大師 <span style="font-size: 1rem; color: #666; font-weight: normal;">| 形狀網格 & 自訂背景</span></h1>
 
     <div class="container">
-        <!-- 左側控制區 -->
         <div class="controls">
-            
             <div class="control-group">
                 <button class="btn btn-upload">
                     📂 上傳照片 (2-9張)
@@ -247,97 +311,130 @@
                 <div id="fileCount" class="info-text">尚未選擇照片</div>
             </div>
 
+            <div id="editControls">
+                <div class="section-title" style="color:var(--primary-color); border-bottom-color:#cce5ff; margin-top:0;">
+                    ✏️ 編輯選取圖片
+                </div>
+                <div class="control-group">
+                    <label>縮放 (Zoom) <span id="zoomValue">1.0x</span></label>
+                    <input type="range" id="zoomInput" min="0.5" max="3" step="0.1" value="1">
+                </div>
+                <div class="info-text">💡 提示：在畫布上拖曳可移動圖片</div>
+            </div>
+
             <div class="section-title">1. 相紙設定</div>
-            
             <div class="control-group">
-                <label>尺寸 (Size)</label>
                 <div class="radio-group" id="sizeGroup">
                     <div class="radio-option" onclick="setPaperSize('3R')">3R (3.5x5")</div>
                     <div class="radio-option active" onclick="setPaperSize('4R')">4R (4x6")</div>
                 </div>
-            </div>
-
-            <div class="control-group">
-                <label>方向 (Orientation)</label>
-                <div class="radio-group" id="orientGroup">
-                    <div class="radio-option active" onclick="setOrientation('landscape')">橫向 (Landscape)</div>
-                    <div class="radio-option" onclick="setOrientation('portrait')">直向 (Portrait)</div>
+                <div class="radio-group" id="orientGroup" style="margin-top:5px;">
+                    <div class="radio-option active" onclick="setOrientation('landscape')">橫向</div>
+                    <div class="radio-option" onclick="setOrientation('portrait')">直向</div>
                 </div>
             </div>
 
-            <div class="section-title">2. 排版樣式</div>
-
+            <div class="section-title">2. 風格選擇</div>
             <div class="control-group">
-                <div class="layout-options" id="layoutButtons">
-                    <!-- 動態生成按鈕 -->
-                    <button class="btn btn-outline active" disabled>請先上傳照片</button>
+                <div class="layout-grid" id="layoutButtons">
+                    <div style="grid-column: 1/-1; text-align: center; color: #999; padding: 10px;">請先上傳照片</div>
                 </div>
             </div>
 
-            <div class="control-group">
-                <button class="btn" style="background-color: var(--secondary-color); color: white; padding: 8px;" onclick="shuffleImages()">
-                    🔀 隨機更換位置
-                </button>
-            </div>
-
-            <div class="section-title">3. 細節調整</div>
-
+            <div class="section-title">3. 外觀設定</div>
             <div class="control-group">
                 <label>邊框間距 <span id="gapValue" style="color:var(--primary-color)">20</span> px</label>
                 <input type="range" id="gapInput" min="0" max="100" value="20">
             </div>
-
             <div class="control-group">
                 <label>背景顏色</label>
                 <input type="color" id="bgColorInput" value="#ffffff" style="width: 100%; height: 35px; border: 1px solid #ddd; border-radius: 6px;">
             </div>
+            <div class="control-group">
+                <label>或 上傳邊框背景圖</label>
+                <div class="bg-controls">
+                    <button class="btn btn-outline btn-upload" style="flex:1; border: 1px dashed #aaa; background: transparent; color: #555;">
+                        📂 選擇背景圖
+                        <input type="file" id="bgImageInput" accept="image/*">
+                    </button>
+                    <button id="removeBgBtn" onclick="clearBgImage()">❌ 清除</button>
+                </div>
+                <div class="info-text">圖片將自動填滿背景</div>
+            </div>
 
             <div id="loading">處理中...</div>
+            <div id="swapTip" class="tip-text">👆 已選取！點擊另一張交換，或拖曳/縮放</div>
+            
             <button class="btn btn-download" onclick="downloadImage()">💾 下載列印檔 (HD)</button>
             <div id="resInfo" class="info-text">規格: 4R - 1800 x 1200 px</div>
         </div>
 
-        <!-- 右側預覽區 -->
         <div class="preview-area">
             <canvas id="collageCanvas"></canvas>
         </div>
     </div>
 
     <script>
-        // 設定與變數
         const DPI = 300;
         const SIZES = {
-            '3R': { w: 5, h: 3.5 }, // 吋
+            '3R': { w: 5, h: 3.5 },
             '4R': { w: 6, h: 4 }
         };
 
+        // --- 排版定義 (18款) ---
+        const FULL_LAYOUT_LIST = [
+            { id: 'grid', icon: '▦', label: '標準網格' },
+            { id: 'masonry', icon: '🧱', label: '磚牆風' },
+            { id: 'film', icon: '🎞️', label: '膠捲風' },
+            { id: 'focus-left', icon: '📰', label: '雜誌風' },
+            { id: 'focus-top', icon: '🖼️', label: '海報風' },
+            { id: 'slant', icon: '⧄', label: '斜切拼貼' },
+            { id: 'radial', icon: '✴️', label: '放射三角' },
+            { id: 'y-split', icon: '☮️', label: 'Y型分割' },
+            { id: 'x-cross', icon: '╳', label: '交叉切割' },
+            { id: 'puzzle', icon: '🧩', label: '幾何拼圖' },
+            // 多圖形網格 (新回歸)
+            { id: 'grid-heart', icon: '💕', label: '愛心網格' },
+            { id: 'grid-circle', icon: '🔵', label: '圓形網格' },
+            { id: 'grid-diamond', icon: '💠', label: '菱形網格' },
+            { id: 'grid-hex', icon: '⬡', label: '蜂巢六邊' },
+            // 中心主圖形狀
+            { id: 'shape-heart', icon: '❤️', label: '中心愛心' },
+            { id: 'shape-circle', icon: '⚪', label: '中心圓形' },
+            { id: 'shape-star', icon: '⭐', label: '中心星形' },
+            { id: 'shape-cloud', icon: '☁️', label: '中心雲朵' }
+        ];
+
         let state = {
-            paper: '4R',        // 3R or 4R
-            orientation: 'landscape', // landscape or portrait
-            layout: 'grid',     // grid, focus, strip-h, strip-v
+            paper: '4R',        
+            orientation: 'landscape', 
+            layout: 'grid',     
             gap: 20,
             bgColor: '#ffffff',
-            images: []          // Loaded Image objects
+            bgImage: null, // 儲存背景圖片物件
+            images: [],
+            selectedIndex: -1,
+            currentRegions: [],
+            isDragging: false,
+            lastMouseX: 0,
+            lastMouseY: 0
         };
 
-        // DOM 元素
         const canvas = document.getElementById('collageCanvas');
         const ctx = canvas.getContext('2d');
         const fileInput = document.getElementById('fileInput');
+        const bgImageInput = document.getElementById('bgImageInput');
         const gapInput = document.getElementById('gapInput');
         const bgColorInput = document.getElementById('bgColorInput');
-        const fileCountDisplay = document.getElementById('fileCount');
-        const layoutContainer = document.getElementById('layoutButtons');
-        const resInfo = document.getElementById('resInfo');
-        const loading = document.getElementById('loading');
-
-        // 初始化
+        
         init();
 
         function init() {
-            setPaperSize('4R', false); // 預設 4R
-            // 事件監聽
+            setPaperSize('4R', false); 
+            
             fileInput.addEventListener('change', handleFileSelect);
+            bgImageInput.addEventListener('change', handleBgImageSelect);
+            
             gapInput.addEventListener('input', (e) => {
                 state.gap = parseInt(e.target.value);
                 document.getElementById('gapValue').textContent = state.gap;
@@ -347,9 +444,22 @@
                 state.bgColor = e.target.value;
                 render();
             });
-        }
+            document.getElementById('zoomInput').addEventListener('input', (e) => {
+                if (state.selectedIndex !== -1) {
+                    const val = parseFloat(e.target.value);
+                    state.images[state.selectedIndex].scale = val;
+                    document.getElementById('zoomValue').textContent = val.toFixed(1) + 'x';
+                    render();
+                }
+            });
 
-        // --- 設定功能 ---
+            canvas.addEventListener('mousedown', handleDown);
+            window.addEventListener('mousemove', handleMove);
+            window.addEventListener('mouseup', handleUp);
+            canvas.addEventListener('touchstart', handleDown, {passive: false});
+            window.addEventListener('touchmove', handleMove, {passive: false});
+            window.addEventListener('touchend', handleUp);
+        }
 
         function setPaperSize(size, doRender = true) {
             state.paper = size;
@@ -365,8 +475,7 @@
 
         function setLayout(layoutType) {
             state.layout = layoutType;
-            // 更新 UI 狀態
-            const buttons = layoutContainer.querySelectorAll('.btn-outline');
+            const buttons = document.getElementById('layoutButtons').querySelectorAll('.layout-btn');
             buttons.forEach(btn => {
                 if (btn.dataset.type === layoutType) btn.classList.add('active');
                 else btn.classList.remove('active');
@@ -383,16 +492,14 @@
             });
         }
 
-        // --- 檔案處理 ---
-
         function handleFileSelect(e) {
             const files = Array.from(e.target.files);
             if (files.length < 2 || files.length > 9) {
                 alert("建議選擇 2 到 9 張照片以獲得最佳效果。");
             }
 
-            fileCountDisplay.textContent = `已選擇 ${files.length} 張照片`;
-            loading.style.display = 'block';
+            document.getElementById('fileCount').textContent = `已選擇 ${files.length} 張照片`;
+            document.getElementById('loading').style.display = 'block';
 
             const promises = files.map(file => {
                 return new Promise((resolve) => {
@@ -407,173 +514,90 @@
             });
 
             Promise.all(promises).then(images => {
-                state.images = images;
-                state.layout = 'grid'; // 重置為預設網格
-                updateLayoutOptions(images.length);
-                loading.style.display = 'none';
+                state.images = images.map(img => ({ source: img, x: 0, y: 0, scale: 1.0 }));
+                state.selectedIndex = -1;
+                updateEditUI();
+                
+                const count = images.length;
+                if (count === 2) state.layout = 'slant';
+                else if (count === 3) state.layout = 'focus-left';
+                else if (count === 4) state.layout = 'grid-heart'; // 預設推薦愛心網格
+                else state.layout = 'grid';
+
+                updateLayoutOptions(count);
+                document.getElementById('loading').style.display = 'none';
                 render();
             });
         }
 
-        function shuffleImages() {
-            if (state.images.length === 0) return;
-            // Fisher-Yates shuffle
-            for (let i = state.images.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [state.images[i], state.images[j]] = [state.images[j], state.images[i]];
-            }
+        function handleBgImageSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    state.bgImage = img;
+                    document.getElementById('removeBgBtn').style.display = 'block';
+                    render();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearBgImage() {
+            state.bgImage = null;
+            document.getElementById('bgImageInput').value = '';
+            document.getElementById('removeBgBtn').style.display = 'none';
             render();
         }
 
         function updateLayoutOptions(count) {
-            layoutContainer.innerHTML = '';
+            const container = document.getElementById('layoutButtons');
+            container.innerHTML = '';
             
-            const options = [
-                { id: 'grid', label: '🔲 自動網格' },
-                { id: 'strip-h', label: '📏 水平排列' },
-                { id: 'strip-v', label: '📐 垂直排列' }
-            ];
-
-            // 只有 3 張以上才顯示「主圖模式」，因為 2 張主圖模式等於 1:1 分割
-            if (count >= 3) {
-                options.splice(1, 0, { id: 'focus', label: '⭐ 主圖模式' });
-            }
-
-            options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = `btn btn-outline ${opt.id === state.layout ? 'active' : ''}`;
-                btn.textContent = opt.label;
+            FULL_LAYOUT_LIST.forEach(opt => {
+                const btn = document.createElement('div');
+                btn.className = `layout-btn ${opt.id === state.layout ? 'active' : ''}`;
+                btn.innerHTML = `<span class="layout-icon">${opt.icon}</span><span>${opt.label}</span>`;
                 btn.dataset.type = opt.id;
                 btn.onclick = () => setLayout(opt.id);
-                layoutContainer.appendChild(btn);
+                container.appendChild(btn);
             });
         }
 
-        // --- 渲染核心 ---
-
-        function render() {
-            // 1. 計算 Canvas 尺寸
-            const sizeInch = SIZES[state.paper];
-            const isLandscape = state.orientation === 'landscape';
-            
-            // 基礎寬高
-            const baseW = isLandscape ? Math.max(sizeInch.w, sizeInch.h) : Math.min(sizeInch.w, sizeInch.h);
-            const baseH = isLandscape ? Math.min(sizeInch.w, sizeInch.h) : Math.max(sizeInch.w, sizeInch.h);
-
-            canvas.width = baseW * DPI;
-            canvas.height = baseH * DPI;
-
-            resInfo.textContent = `規格: ${state.paper} (${isLandscape?'橫':'直'}) - ${canvas.width} x ${canvas.height} px`;
-
-            const W = canvas.width;
-            const H = canvas.height;
-            const gap = state.gap * 2; // 高解析度下加倍間距
-
-            // 2. 繪製背景
-            ctx.fillStyle = state.bgColor;
-            ctx.fillRect(0, 0, W, H);
-
-            if (state.images.length === 0) {
-                drawEmptyState();
-                return;
+        function updateEditUI() {
+            const editControls = document.getElementById('editControls');
+            const swapTip = document.getElementById('swapTip');
+            if (state.selectedIndex !== -1) {
+                editControls.style.display = 'block';
+                swapTip.style.display = 'block';
+                const imgData = state.images[state.selectedIndex];
+                document.getElementById('zoomInput').value = imgData.scale;
+                document.getElementById('zoomValue').textContent = imgData.scale.toFixed(1) + 'x';
+            } else {
+                editControls.style.display = 'none';
+                swapTip.style.display = 'none';
             }
-
-            // 3. 計算版面配置 (Rectangles)
-            const rects = calculateLayout(state.layout, state.images.length, W, H, gap);
-
-            // 4. 繪圖
-            rects.forEach((rect, i) => {
-                if (state.images[i]) {
-                    drawObjectFit(state.images[i], rect.x, rect.y, rect.w, rect.h);
-                }
-            });
         }
 
+        // --- 排版計算 ---
         function calculateLayout(type, count, W, H, gap) {
-            let rects = [];
-            
-            if (type === 'strip-h') {
-                // 水平條狀
-                const h = (H - (count + 1) * gap) / count;
-                for(let i=0; i<count; i++) {
-                    rects.push({ x: gap, y: gap + i*(h+gap), w: W - 2*gap, h: h });
-                }
-            } 
-            else if (type === 'strip-v') {
-                // 垂直條狀
-                const w = (W - (count + 1) * gap) / count;
-                for(let i=0; i<count; i++) {
-                    rects.push({ x: gap + i*(w+gap), y: gap, w: w, h: H - 2*gap });
-                }
-            }
-            else if (type === 'focus' && count >= 3) {
-                // 主圖模式：判斷畫布是橫是直
-                const isWide = W > H;
-                
-                if (isWide) {
-                    // 橫向畫布：左邊一大張，右邊剩餘網格
-                    const mainW = (W - 3*gap) / 2; // 約一半
-                    const mainH = H - 2*gap;
-                    
-                    // 主圖 (Img 0)
-                    rects.push({ x: gap, y: gap, w: mainW, h: mainH });
+            const rect = (x,y,w,h) => ({type:'rect', x, y, w, h});
+            let regions = [];
 
-                    // 右側小圖區域
-                    const rightX = gap + mainW + gap;
-                    const rightW = mainW; // 同寬
-                    const subCount = count - 1;
-                    // 計算右側網格
-                    const cols = Math.ceil(Math.sqrt(subCount));
-                    const rows = Math.ceil(subCount / cols);
-                    const cellW = (rightW - (cols-1)*gap) / cols;
-                    const cellH = (mainH - (rows-1)*gap) / rows;
-
-                    for(let i=0; i<subCount; i++) {
-                        const c = i % cols;
-                        const r = Math.floor(i / cols);
-                        rects.push({
-                            x: rightX + c*(cellW+gap),
-                            y: gap + r*(cellH+gap),
-                            w: cellW,
-                            h: cellH
-                        });
-                    }
-                } else {
-                    // 直向畫布：上面一大張，下面剩餘網格
-                    const mainH = (H - 3*gap) / 2;
-                    const mainW = W - 2*gap;
-
-                    rects.push({ x: gap, y: gap, w: mainW, h: mainH });
-
-                    const botY = gap + mainH + gap;
-                    const botH = mainH;
-                    const subCount = count - 1;
-                    
-                    const cols = Math.ceil(Math.sqrt(subCount)); // 偏好寬的網格
-                    const rows = Math.ceil(subCount / cols);
-                    const cellW = (mainW - (cols-1)*gap) / cols;
-                    const cellH = (botH - (rows-1)*gap) / rows;
-
-                    for(let i=0; i<subCount; i++) {
-                        const c = i % cols;
-                        const r = Math.floor(i / cols);
-                        rects.push({
-                            x: gap + c*(cellW+gap),
-                            y: botY + r*(cellH+gap),
-                            w: cellW,
-                            h: cellH
-                        });
-                    }
-                }
-            }
-            else {
-                // Default Grid (自動網格)
-                // 智慧計算 Cols/Rows
+            // 1. Grid (網格) & Base for Multi-Shape Grid
+            if (type === 'grid' || type.startsWith('grid-')) {
+                let gridRegions = [];
+                // 計算基礎網格
                 let cols, rows;
-                if (count === 2) { cols = W > H ? 2 : 1; rows = W > H ? 1 : 2; }
-                else if (count === 3) { cols = W > H ? 3 : 1; rows = W > H ? 1 : 3; }
+                if (count === 1) { cols = 1; rows = 1; }
+                else if (count === 2) { cols = 2; rows = 1; }
+                else if (count === 3) { cols = 3; rows = 1; }
                 else if (count === 4) { cols = 2; rows = 2; }
-                else if (count === 5 || count === 6) { cols = W > H ? 3 : 2; rows = W > H ? 2 : 3; }
+                else if (count === 5 || count === 6) { cols = 3; rows = 2; }
                 else { cols = Math.ceil(Math.sqrt(count)); rows = Math.ceil(count / cols); }
 
                 const cellW = (W - (cols + 1) * gap) / cols;
@@ -582,57 +606,470 @@
                 for (let i = 0; i < count; i++) {
                     const c = i % cols;
                     const r = Math.floor(i / cols);
-                    rects.push({
+                    gridRegions.push({
+                        type: 'rect', // default
                         x: gap + c * (cellW + gap),
                         y: gap + r * (cellH + gap),
                         w: cellW,
                         h: cellH
                     });
                 }
+
+                // 如果是特殊形狀網格，轉換 region 屬性
+                if (type === 'grid-heart' || type === 'grid-circle' || type === 'grid-diamond' || type === 'grid-hex') {
+                    const shapeType = type.split('-')[1]; // heart, circle, etc.
+                    return gridRegions.map(r => ({
+                        ...r,
+                        type: 'shape', 
+                        shapeType: shapeType,
+                        // 讓形狀稍微內縮一點，避免太擁擠
+                        x: r.x + 5, y: r.y + 5, w: r.w - 10, h: r.h - 10,
+                        bounds: { x: r.x, y: r.y, w: r.w, h: r.h }
+                    }));
+                }
+                
+                return gridRegions;
             }
-            return rects;
+
+            // 2. Masonry
+            if (type === 'masonry') {
+                const cols = 2;
+                const colW = (W - (cols+1)*gap) / cols;
+                let colY = [gap, gap];
+                for(let i=0; i<count; i++) {
+                    let shortestCol = colY[1] < colY[0] ? 1 : 0;
+                    let aspect = (i % 3 === 0) ? 1.4 : 0.8; 
+                    let h = colW * aspect;
+                    if (colY[shortestCol] + h > H - gap) h = H - gap - colY[shortestCol];
+                    regions.push(rect(gap + shortestCol*(colW+gap), colY[shortestCol], colW, h));
+                    colY[shortestCol] += h + gap;
+                }
+                return regions;
+            }
+
+            // 3. Film
+            if (type === 'film') {
+                const isVertical = H > W;
+                if (isVertical) {
+                    const h = (H - (count+1)*gap) / count;
+                    for(let i=0; i<count; i++) regions.push(rect(gap, gap + i*(h+gap), W - 2*gap, h));
+                } else {
+                    const w = (W - (count+1)*gap) / count;
+                    for(let i=0; i<count; i++) regions.push(rect(gap + i*(w+gap), gap, w, H - 2*gap));
+                }
+                return regions;
+            }
+
+            // 4. Focus Left
+            if (type === 'focus-left') {
+                const mainW = (W - 3*gap) * 0.6;
+                regions.push(rect(gap, gap, mainW, H - 2*gap)); 
+                const subCount = count - 1;
+                const rightX = gap + mainW + gap;
+                const rightW = W - rightX - gap;
+                const cols = (subCount <= 3) ? 1 : Math.ceil(Math.sqrt(subCount));
+                const rows = Math.ceil(subCount / cols);
+                const cellW = (rightW - (cols-1)*gap) / cols;
+                const cellH = (H - 2*gap - (rows-1)*gap) / rows;
+                for(let i=0; i<subCount; i++) {
+                    const c = i % cols;
+                    const r = Math.floor(i / cols);
+                    regions.push(rect(rightX + c*(cellW+gap), gap + r*(cellH+gap), cellW, cellH));
+                }
+                return regions;
+            }
+
+            // 5. Focus Top
+            if (type === 'focus-top') {
+                const mainH = (H - 3*gap) * 0.6;
+                regions.push(rect(gap, gap, W - 2*gap, mainH));
+                const subCount = count - 1;
+                const botY = gap + mainH + gap;
+                const botH = H - botY - gap;
+                const rows = (subCount > 4) ? 2 : 1;
+                const cols = Math.ceil(subCount / rows);
+                const cellW = (W - 2*gap - (cols-1)*gap) / cols;
+                const cellH = (botH - (rows-1)*gap) / rows;
+                for(let i=0; i<subCount; i++) {
+                    const c = i % cols;
+                    const r = Math.floor(i / cols);
+                    regions.push(rect(gap + c*(cellW+gap), botY + r*(cellH+gap), cellW, cellH));
+                }
+                return regions;
+            }
+
+            // 6. Slant
+            if (type === 'slant') {
+                if (count === 2) {
+                    regions.push({ type: 'poly', points: [{x:0,y:0}, {x:W,y:0}, {x:W,y:H*0.8}, {x:0,y:H*0.2}], bounds: {x:0,y:0,w:W,h:H*0.8} });
+                    regions.push({ type: 'poly', points: [{x:0,y:H*0.2}, {x:W,y:H*0.8}, {x:W,y:H}, {x:0,y:H}], bounds: {x:0,y:H*0.2,w:W,h:H*0.8} });
+                } else {
+                    return calculateLayout('x-cross', count, W, H, gap);
+                }
+                return regions;
+            }
+
+            // 7. Radial & 8. Y-Split
+            if (type === 'radial' || type === 'y-split') {
+                const cx = W/2, cy = H/2;
+                if (count === 3) { 
+                    regions.push({ type: 'poly', points: [{x:cx,y:cy}, {x:0,y:0}, {x:W,y:0}], bounds: {x:0,y:0,w:W,h:cy} }); 
+                    regions.push({ type: 'poly', points: [{x:cx,y:cy}, {x:W,y:0}, {x:W,y:H}, {x:cx,y:H}], bounds: {x:cx,y:0,w:cx,h:H} }); 
+                    regions.push({ type: 'poly', points: [{x:cx,y:cy}, {x:cx,y:H}, {x:0,y:H}, {x:0,y:0}], bounds: {x:0,y:0,w:cx,h:H} });
+                } else { 
+                    regions.push({ type: 'poly', points: [{x:0,y:0}, {x:W,y:0}, {x:cx,y:cy}], bounds: {x:0,y:0,w:W,h:cy} });
+                    regions.push({ type: 'poly', points: [{x:W,y:0}, {x:W,y:H}, {x:cx,y:cy}], bounds: {x:cx,y:0,w:cx,h:H} });
+                    regions.push({ type: 'poly', points: [{x:W,y:H}, {x:0,y:H}, {x:cx,y:cy}], bounds: {x:0,y:cy,w:W,h:cy} });
+                    regions.push({ type: 'poly', points: [{x:0,y:H}, {x:0,y:0}, {x:cx,y:cy}], bounds: {x:0,y:0,w:cx,h:H} });
+                }
+                return regions;
+            }
+
+            // 9. X-Cross
+            if (type === 'x-cross') {
+                const cx = W/2, cy = H/2;
+                regions.push({ type: 'poly', points: [{x:0,y:0}, {x:W,y:0}, {x:cx,y:cy}], bounds: {x:0,y:0,w:W,h:cy} });
+                regions.push({ type: 'poly', points: [{x:W,y:0}, {x:W,y:H}, {x:cx,y:cy}], bounds: {x:cx,y:0,w:cx,h:H} });
+                regions.push({ type: 'poly', points: [{x:W,y:H}, {x:0,y:H}, {x:cx,y:cy}], bounds: {x:0,y:cy,w:W,h:cy} });
+                regions.push({ type: 'poly', points: [{x:0,y:H}, {x:0,y:0}, {x:cx,y:cy}], bounds: {x:0,y:0,w:cx,h:H} });
+                return regions;
+            }
+
+            // 10. Puzzle
+            if (type === 'puzzle') {
+                const cx = W*0.6, cy = H*0.4;
+                regions.push({ type: 'poly', points: [{x:0,y:0}, {x:W,y:0}, {x:cx,y:cy}, {x:0,y:H}], bounds: {x:0,y:0,w:W,h:H} });
+                regions.push({ type: 'poly', points: [{x:W,y:0}, {x:W,y:cy}, {x:cx,y:cy}], bounds: {x:cx,y:0,w:W-cx,h:cy} });
+                regions.push({ type: 'poly', points: [{x:cx,y:cy}, {x:W,y:cy}, {x:W,y:H}, {x:W*0.3,y:H}], bounds: {x:W*0.3,y:cy,w:W*0.7,h:H-cy} });
+                regions.push({ type: 'poly', points: [{x:0,y:H}, {x:W*0.3,y:H}, {x:cx,y:cy}, {x:0,y:cy*1.5}], bounds: {x:0,y:cy,w:cx,h:H-cy} });
+                return regions;
+            }
+
+            // Center Shapes
+            if (type.startsWith('shape-')) {
+                const shapeType = type.split('-')[1];
+                const minDim = Math.min(W, H);
+                const padding = minDim * 0.15;
+                const shapeSize = minDim - padding * 2;
+                const shapeX = (W - shapeSize) / 2;
+                const shapeY = (H - shapeSize) / 2;
+                
+                const shapeRegion = {
+                    type: 'shape', shapeType: shapeType,
+                    x: shapeX, y: shapeY, w: shapeSize, h: shapeSize,
+                    bounds: {x: shapeX, y: shapeY, w: shapeSize, h: shapeSize}
+                };
+                
+                let bgRegions = [];
+                const bgCount = count - 1;
+                if (bgCount > 0) {
+                    // 背景使用 Grid 計算
+                    // 借用 Grid 邏輯計算背景
+                    let cols, rows;
+                    if (bgCount === 1) { cols = 1; rows = 1; }
+                    else if (bgCount === 2) { cols = 2; rows = 1; }
+                    else if (bgCount === 3) { cols = 3; rows = 1; }
+                    else if (bgCount === 4) { cols = 2; rows = 2; }
+                    else { cols = Math.ceil(Math.sqrt(bgCount)); rows = Math.ceil(bgCount / cols); }
+                    const cellW = (W - (cols + 1) * gap) / cols;
+                    const cellH = (H - (rows + 1) * gap) / rows;
+                    for (let i = 0; i < bgCount; i++) {
+                        const c = i % cols;
+                        const r = Math.floor(i / cols);
+                        bgRegions.push({type: 'rect', x: gap + c*(cellW+gap), y: gap + r*(cellH+gap), w: cellW, h: cellH});
+                    }
+                } else bgRegions = [rect(0, 0, W, H)];
+                
+                regions = [shapeRegion, ...bgRegions];
+                regions.renderOrder = Array.from({length: count}, (_, i) => i);
+                regions.renderOrder.push(regions.renderOrder.shift()); 
+                return regions;
+            }
+
+            return calculateLayout('grid', count, W, H, gap); // Fallback
         }
 
-        function drawObjectFit(img, x, y, w, h) {
-            // 簡單的 Object-fit: Cover 演算法
-            const imgRatio = img.width / img.height;
-            const targetRatio = w / h;
-            let sx, sy, sWidth, sHeight;
-
-            if (imgRatio > targetRatio) {
-                sHeight = img.height;
-                sWidth = sHeight * targetRatio;
-                sy = 0;
-                sx = (img.width - sWidth) / 2;
-            } else {
-                sWidth = img.width;
-                sHeight = sWidth / targetRatio;
-                sx = 0;
-                sy = (img.height - sHeight) / 2;
+        // --- Render ---
+        function render() {
+            const W = canvas.width;
+            const H = canvas.height;
+            const gap = state.gap * 2;
+            
+            if (state.images.length > 0) {
+                state.currentRegions = calculateLayout(state.layout, state.images.length, W, H, gap);
             }
-            ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h);
+            
+            const sizeInch = SIZES[state.paper];
+            const isLandscape = state.orientation === 'landscape';
+            const baseW = isLandscape ? Math.max(sizeInch.w, sizeInch.h) : Math.min(sizeInch.w, sizeInch.h);
+            const baseH = isLandscape ? Math.min(sizeInch.w, sizeInch.h) : Math.max(sizeInch.w, sizeInch.h);
+            canvas.width = baseW * DPI;
+            canvas.height = baseH * DPI;
+            document.getElementById('resInfo').textContent = `規格: ${state.paper} (${isLandscape?'橫':'直'}) - ${canvas.width} x ${canvas.height} px`;
+            
+            // 繪製背景 (顏色或圖片)
+            if (state.bgImage) {
+                // 繪製背景圖片 (Cover 模式)
+                drawObjectFit({source: state.bgImage}, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = state.bgColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            if (state.images.length === 0) {
+                drawEmptyState();
+                return;
+            }
+
+            const regions = state.currentRegions;
+            const drawOrder = regions.renderOrder || Array.from({length: regions.length}, (_, i) => i);
+
+            drawOrder.forEach(i => {
+                const region = regions[i];
+                if (!region) return; 
+                if (state.images[i]) {
+                    ctx.save();
+                    
+                    ctx.beginPath();
+                    if (region.type === 'shape') {
+                        drawShape(ctx, region.shapeType, region.x, region.y, region.w, region.h);
+                    } else if (region.type === 'poly') {
+                        drawPoly(ctx, region.points);
+                    } else {
+                        ctx.rect(region.x, region.y, region.w, region.h);
+                    }
+                    
+                    // Shadow
+                    if (region.type === 'shape' || state.layout.startsWith('geo') || region.shapeType === 'diamond' || region.shapeType === 'hexagon') {
+                        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                        ctx.shadowBlur = 15;
+                        ctx.shadowOffsetX = 4;
+                        ctx.shadowOffsetY = 4;
+                    }
+
+                    // Stroke for Shapes (White Sticker Effect)
+                    if (region.type === 'shape') {
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 25; 
+                        ctx.stroke();
+                        ctx.shadowColor = 'transparent'; 
+                    }
+
+                    ctx.clip();
+
+                    const imgData = state.images[i];
+                    const bx = region.bounds ? region.bounds.x : region.x;
+                    const by = region.bounds ? region.bounds.y : region.y;
+                    const bw = region.bounds ? region.bounds.w : region.w;
+                    const bh = region.bounds ? region.bounds.h : region.h;
+                    
+                    drawObjectFit(imgData, bx, by, bw, bh);
+                    ctx.restore();
+
+                    // Gap stroke for Poly (使用背景色或背景圖)
+                    // 如果有背景圖，這裡畫線會比較奇怪，通常不畫線或者畫透明線
+                    // 為了簡化，如果是 Poly 且有間距，我們用 eraser 方式? 不行，canvas 沒有 erase.
+                    // 簡單解法：如果用戶上傳背景圖，我們就不畫間距線，讓圖片自然拼接
+                    // 或者：如果用戶選了 gap，我們還是用 bgColor 畫線
+                    if (region.type === 'poly' && gap > 0) {
+                        ctx.save();
+                        ctx.beginPath();
+                        drawPoly(ctx, region.points);
+                        // 如果有背景圖，這條線的顏色可能是問題。暫時維持 bgColor
+                        ctx.strokeStyle = state.bgColor; 
+                        ctx.lineWidth = gap;
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    if (i === state.selectedIndex) {
+                        ctx.save();
+                        ctx.beginPath();
+                        if (region.type === 'shape') drawShape(ctx, region.shapeType, region.x, region.y, region.w, region.h);
+                        else if (region.type === 'poly') drawPoly(ctx, region.points);
+                        else ctx.rect(region.x, region.y, region.w, region.h);
+                        
+                        ctx.strokeStyle = '#ff4757';
+                        ctx.lineWidth = 15;
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            });
+        }
+
+        function drawShape(ctx, type, x, y, w, h) {
+            const cx = x + w/2;
+            const cy = y + h/2;
+            const size = Math.min(w, h) / 2;
+
+            if (type === 'heart') {
+                const topCurveHeight = size * 0.35;
+                const widthOffset = size * 0.95; 
+                ctx.moveTo(cx, cy + size * 0.7);
+                ctx.bezierCurveTo(cx - widthOffset, cy - size * 0.3, cx - widthOffset, cy - size * 0.9, cx, cy - size * 0.3);
+                ctx.bezierCurveTo(cx + widthOffset, cy - size * 0.9, cx + widthOffset, cy - size * 0.3, cx, cy + size * 0.7);
+                ctx.closePath();
+            } 
+            else if (type === 'circle') ctx.arc(cx, cy, size * 0.9, 0, Math.PI * 2);
+            else if (type === 'star') {
+                const outer = size * 0.9;
+                const inner = size * 0.4;
+                for (let i = 0; i < 5; i++) {
+                    const angle = (18 + i * 72) * Math.PI / 180;
+                    const x1 = cx + outer * Math.cos(angle); 
+                    const y1 = cy - outer * Math.sin(angle); 
+                    if (i === 0) ctx.moveTo(x1, y1); else ctx.lineTo(x1, y1);
+                    const angle2 = (54 + i * 72) * Math.PI / 180;
+                    const x2 = cx + inner * Math.cos(angle2);
+                    const y2 = cy - inner * Math.sin(angle2);
+                    ctx.lineTo(x2, y2);
+                }
+                ctx.closePath();
+            }
+            else if (type === 'diamond') {
+                const dSize = size * 0.9;
+                ctx.moveTo(cx, cy - dSize); ctx.lineTo(cx + dSize, cy);
+                ctx.lineTo(cx, cy + dSize); ctx.lineTo(cx - dSize, cy);
+                ctx.closePath();
+            }
+            else if (type === 'hexagon') {
+                const hSize = size * 0.9;
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * 60 - 90) * Math.PI / 180;
+                    const px = cx + hSize * Math.cos(angle);
+                    const py = cy + hSize * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+            }
+            else if (type === 'cloud') {
+                const cSize = size * 1.6; 
+                const wRatio = cSize * 0.5; const hRatio = cSize * 0.35;
+                ctx.moveTo(cx - wRatio, cy); 
+                ctx.bezierCurveTo(cx - wRatio, cy - hRatio, cx - wRatio*0.5, cy - hRatio*1.3, cx - wRatio*0.2, cy - hRatio*0.8);
+                ctx.bezierCurveTo(cx, cy - hRatio*1.8, cx + wRatio*0.5, cy - hRatio*1.5, cx + wRatio*0.6, cy - hRatio*0.6);
+                ctx.bezierCurveTo(cx + wRatio, cy - hRatio, cx + wRatio, cy + hRatio, cx + wRatio*0.4, cy + hRatio*0.8);
+                ctx.bezierCurveTo(cx, cy + hRatio*1.5, cx - wRatio*0.8, cy + hRatio, cx - wRatio, cy);
+            }
+        }
+
+        function drawPoly(ctx, points) {
+            ctx.moveTo(points[0].x, points[0].y);
+            for(let k=1; k<points.length; k++) ctx.lineTo(points[k].x, points[k].y);
+            ctx.closePath();
+        }
+
+        function drawObjectFit(imgData, x, y, w, h) {
+            const img = imgData.source;
+            // Handle scale being undefined for background image
+            const scale = imgData.scale || 1;
+            const uX = imgData.x || 0;
+            const uY = imgData.y || 0;
+
+            let sW, sH, sx, sy;
+            const imgR = img.width / img.height;
+            const tgtR = w / h;
+
+            if (imgR > tgtR) {
+                sH = img.height; sW = sH * tgtR;
+                sy = 0; sx = (img.width - sW) / 2;
+            } else {
+                sW = img.width; sH = sW / tgtR;
+                sx = 0; sy = (img.height - sH) / 2;
+            }
+
+            const zSW = sW / scale;
+            const zSH = sH / scale;
+            sx += (sW - zSW) / 2;
+            sy += (sH - zSH) / 2;
+
+            const ratio = sW / w;
+            sx -= uX * ratio / scale;
+            sy -= uY * ratio / scale;
+
+            ctx.drawImage(img, sx, sy, zSW, zSH, x, y, w, h);
+        }
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: (cx - rect.left) * (canvas.width / rect.width),
+                y: (cy - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        function handleDown(e) {
+            if (e.touches) e.preventDefault();
+            if (state.images.length === 0) return;
+            const pos = getPos(e);
+            
+            let idx = -1;
+            const regions = state.currentRegions;
+            const order = regions.renderOrder ? [...regions.renderOrder].reverse() : [...Array(regions.length).keys()].reverse();
+
+            for (let i of order) {
+                const r = regions[i];
+                if (!r) continue;
+                if (isHit(pos.x, pos.y, r)) {
+                    idx = i;
+                    break;
+                }
+            }
+
+            if (idx === -1) {
+                state.selectedIndex = -1;
+                state.isDragging = false;
+            } else if (state.selectedIndex !== -1 && state.selectedIndex !== idx) {
+                [state.images[state.selectedIndex], state.images[idx]] = [state.images[idx], state.images[state.selectedIndex]];
+                state.selectedIndex = idx; 
+                state.isDragging = false;
+            } else {
+                state.selectedIndex = idx;
+                state.isDragging = true;
+                state.lastMouseX = pos.x;
+                state.lastMouseY = pos.y;
+            }
+            updateEditUI();
+            render();
+        }
+
+        function handleMove(e) {
+            if (!state.isDragging || state.selectedIndex === -1) return;
+            if (e.touches) e.preventDefault();
+            const pos = getPos(e);
+            const dx = pos.x - state.lastMouseX;
+            const dy = pos.y - state.lastMouseY;
+            
+            state.images[state.selectedIndex].x += dx;
+            state.images[state.selectedIndex].y += dy;
+            
+            state.lastMouseX = pos.x;
+            state.lastMouseY = pos.y;
+            render();
+        }
+
+        function handleUp() { state.isDragging = false; }
+
+        function isHit(x, y, r) {
+            const b = r.bounds || r;
+            return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
         }
 
         function drawEmptyState() {
-            ctx.fillStyle = "#eeeeee";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#bbbbbb";
-            ctx.font = "bold 80px sans-serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(state.paper, canvas.width/2, canvas.height/2 - 40);
-            ctx.font = "40px sans-serif";
-            ctx.fillText("預覽區", canvas.width/2, canvas.height/2 + 40);
+            ctx.fillStyle = "#eee"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#bbb"; ctx.font = "bold 80px sans-serif";
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(state.paper, canvas.width/2, canvas.height/2);
         }
 
         function downloadImage() {
-            if (state.images.length === 0) {
-                alert("請先上傳照片！");
-                return;
-            }
+            if (state.images.length === 0) return alert("請先上傳照片");
             const link = document.createElement('a');
-            link.download = `collage_${state.paper}_${new Date().getTime()}.jpg`;
-            link.href = canvas.toDataURL('image/jpeg', 0.92);
+            link.download = `collage_${new Date().getTime()}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
             link.click();
         }
     </script>
